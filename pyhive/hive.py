@@ -117,6 +117,7 @@ class Connection(object):
         auth=None,
         configuration=None,
         kerberos_service_name=None,
+        kerberos_host=None,
         password=None,
         check_hostname=None,
         ssl_cert=None,
@@ -130,6 +131,7 @@ class Connection(object):
             Defaults to ``NONE``.
         :param configuration: A dictionary of Hive settings (functionally same as the `set` command)
         :param kerberos_service_name: Use with auth='KERBEROS' only
+        :param kerberos_host: Use with auth='KERBEROS' only in case where kerberos host is not identical with host
         :param password: Use with auth='LDAP' or auth='CUSTOM' only
         :param thrift_transport: A ``TTransportBase`` for custom advanced usage.
             Incompatible with host, port, auth, kerberos_service_name, and password.
@@ -175,6 +177,8 @@ class Connection(object):
                              "Remove password or use one of those modes")
         if (kerberos_service_name is not None) != (auth == 'KERBEROS'):
             raise ValueError("kerberos_service_name should be set if and only if in KERBEROS mode")
+        if (kerberos_host is not None) != (auth == 'KERBEROS'):
+            raise ValueError("kerberos_host should be set if and only if in KERBEROS mode")
         if thrift_transport is not None:
             has_incompatible_arg = (
                 host is not None
@@ -214,7 +218,10 @@ class Connection(object):
 
                 def sasl_factory():
                     sasl_client = sasl.Client()
-                    sasl_client.setAttr('host', host)
+                    if kerberos_host is None:
+                        sasl_client.setAttr('host', host)
+                    else:
+                        sasl_client.setAttr('host', kerberos_host)
                     if sasl_auth == 'GSSAPI':
                         sasl_client.setAttr('service', kerberos_service_name)
                     elif sasl_auth == 'PLAIN':
